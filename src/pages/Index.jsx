@@ -10,10 +10,16 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Home, MessageSquare, Settings, HelpCircle, Menu } from "lucide-react";
+import { Home, MessageSquare, Settings, HelpCircle, Menu, Plus } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 const Index = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [portfolioItems, setPortfolioItems] = useState([]);
+  const [newItem, setNewItem] = useState({ title: "", description: "", link: "" });
 
   const navItems = [
     { icon: <Home className="h-5 w-5" />, label: 'Dashboard' },
@@ -21,6 +27,13 @@ const Index = () => {
     { icon: <Settings className="h-5 w-5" />, label: 'Settings' },
     { icon: <HelpCircle className="h-5 w-5" />, label: 'Help' },
   ];
+
+  const handleAddPortfolioItem = () => {
+    if (newItem.title && newItem.description) {
+      setPortfolioItems([...portfolioItems, { ...newItem, id: Date.now() }]);
+      setNewItem({ title: "", description: "", link: "" });
+    }
+  };
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -98,12 +111,88 @@ const Index = () => {
             </CardContent>
           </Card>
 
-          <Tabs defaultValue="activity" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-3">
+          <Tabs defaultValue="portfolio" className="space-y-4">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
               <TabsTrigger value="activity">Activity</TabsTrigger>
               <TabsTrigger value="friends">Friends</TabsTrigger>
               <TabsTrigger value="settings">Settings</TabsTrigger>
             </TabsList>
+            <TabsContent value="portfolio">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Portfolio Items</CardTitle>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button size="sm">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Item
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[425px]">
+                      <DialogHeader>
+                        <DialogTitle>Add Portfolio Item</DialogTitle>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="title" className="text-right">
+                            Title
+                          </Label>
+                          <Input
+                            id="title"
+                            value={newItem.title}
+                            onChange={(e) => setNewItem({ ...newItem, title: e.target.value })}
+                            className="col-span-3"
+                          />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="description" className="text-right">
+                            Description
+                          </Label>
+                          <Textarea
+                            id="description"
+                            value={newItem.description}
+                            onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+                            className="col-span-3"
+                          />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="link" className="text-right">
+                            Link
+                          </Label>
+                          <Input
+                            id="link"
+                            value={newItem.link}
+                            onChange={(e) => setNewItem({ ...newItem, link: e.target.value })}
+                            className="col-span-3"
+                          />
+                        </div>
+                      </div>
+                      <Button onClick={handleAddPortfolioItem}>Add to Portfolio</Button>
+                    </DialogContent>
+                  </Dialog>
+                </CardHeader>
+                <CardContent>
+                  {portfolioItems.length === 0 ? (
+                    <p>No portfolio items yet. Add your first item!</p>
+                  ) : (
+                    <ul className="space-y-4">
+                      {portfolioItems.map((item) => (
+                        <li key={item.id} className="bg-gray-100 p-4 rounded-md">
+                          <h3 className="font-semibold">{item.title}</h3>
+                          <p className="text-sm text-gray-600">{item.description}</p>
+                          {item.link && (
+                            <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline text-sm">
+                              View Project
+                            </a>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
             <TabsContent value="activity">
               <Card>
                 <CardHeader>
