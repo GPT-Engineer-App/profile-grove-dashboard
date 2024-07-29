@@ -10,7 +10,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Home, MessageSquare, Settings, HelpCircle, Menu, Plus, ChevronRight, Filter, Clock, Award, Briefcase } from "lucide-react";
+import { Home, MessageSquare, Settings, HelpCircle, Menu, Plus, ChevronRight, Filter, Clock, Award, Briefcase, ArrowUpDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,11 +21,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import {
+  Tooltip as ShadTooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const Index = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [portfolioItems, setPortfolioItems] = useState([]);
-  const [newItem, setNewItem] = useState({ title: "", description: "", link: "", environment: "", tags: [] });
+  const [newItem, setNewItem] = useState({
+    title: "",
+    description: "",
+    link: "",
+    environment: "",
+    tags: [],
+    technologies: [],
+    challenges: "",
+    outcomes: "",
+    startDate: "",
+    endDate: "",
+  });
   const [skills, setSkills] = useState([
     { name: "React", level: 80, description: "Building modern web applications", projects: ["Portfolio Dashboard"], timeSpent: 500, certifications: ["React Developer Certificate"] },
     { name: "JavaScript", level: 85, description: "Core language for web development", projects: ["Interactive Web Apps"], timeSpent: 1000, certifications: ["JavaScript Advanced"] },
@@ -46,6 +63,9 @@ const Index = () => {
     { id: "portfolio", label: "Portfolio", completed: false },
     { id: "activity", label: "Activity", completed: false },
   ]);
+  const [portfolioSort, setPortfolioSort] = useState("dateAdded");
+  const [portfolioFilter, setPortfolioFilter] = useState("all");
+  const [currentStep, setCurrentStep] = useState(0);
 
   const navItems = [
     { icon: <Home className="h-5 w-5" />, label: 'Dashboard' },
@@ -56,8 +76,20 @@ const Index = () => {
 
   const handleAddPortfolioItem = () => {
     if (newItem.title && newItem.description) {
-      setPortfolioItems([...portfolioItems, { ...newItem, id: Date.now() }]);
-      setNewItem({ title: "", description: "", link: "", environment: "", tags: [] });
+      setPortfolioItems([...portfolioItems, { ...newItem, id: Date.now(), dateAdded: new Date() }]);
+      setNewItem({
+        title: "",
+        description: "",
+        link: "",
+        environment: "",
+        tags: [],
+        technologies: [],
+        challenges: "",
+        outcomes: "",
+        startDate: "",
+        endDate: "",
+      });
+      setCurrentStep(0);
     }
   };
 
@@ -87,6 +119,37 @@ const Index = () => {
     const [reorderedItem] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, reorderedItem);
     setPortfolioItems(items);
+  };
+
+  const sortedAndFilteredPortfolioItems = portfolioItems
+    .filter(item => {
+      if (portfolioFilter === "all") return true;
+      return item.tags.includes(portfolioFilter) || item.technologies.includes(portfolioFilter);
+    })
+    .sort((a, b) => {
+      if (portfolioSort === "dateAdded") {
+        return new Date(b.dateAdded) - new Date(a.dateAdded);
+      } else if (portfolioSort === "title") {
+        return a.title.localeCompare(b.title);
+      }
+      return 0;
+    });
+
+  const extrapolateProject = () => {
+    const technologies = portfolioItems.flatMap(item => item.technologies);
+    const mostUsedTech = technologies.reduce((acc, tech) => {
+      acc[tech] = (acc[tech] || 0) + 1;
+      return acc;
+    }, {});
+    const suggestedTech = Object.keys(mostUsedTech).sort((a, b) => mostUsedTech[b] - mostUsedTech[a]).slice(0, 3);
+
+    return {
+      title: "Suggested Future Project",
+      description: "Based on your current portfolio, you might consider a project that combines your top skills.",
+      technologies: suggestedTech,
+      challenges: "Integrating multiple technologies seamlessly",
+      outcomes: "Showcase advanced skills and create a unique solution"
+    };
   };
 
   const renderProfileSection = () => {
@@ -175,11 +238,33 @@ const Index = () => {
         return (
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Portfolio</h3>
+            <div className="flex justify-between items-center space-x-2">
+              <Select value={portfolioSort} onValueChange={setPortfolioSort}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="dateAdded">Date Added</SelectItem>
+                  <SelectItem value="title">Title</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={portfolioFilter} onValueChange={setPortfolioFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Projects</SelectItem>
+                  {Array.from(new Set(portfolioItems.flatMap(item => [...item.tags, ...item.technologies]))).map((filter, index) => (
+                    <SelectItem key={index} value={filter}>{filter}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <DragDropContext onDragEnd={onDragEnd}>
               <Droppable droppableId="portfolio">
                 {(provided) => (
                   <div {...provided.droppableProps} ref={provided.innerRef}>
-                    {portfolioItems.map((item, index) => (
+                    {sortedAndFilteredPortfolioItems.map((item, index) => (
                       <Draggable key={item.id} draggableId={item.id.toString()} index={index}>
                         {(provided) => (
                           <div
@@ -187,29 +272,28 @@ const Index = () => {
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
                           >
-                            <Accordion type="single" collapsible>
+                            <Accordion type="single" collapsible className="mb-4">
                               <AccordionItem value={`item-${item.id}`}>
                                 <AccordionTrigger>{item.title}</AccordionTrigger>
                                 <AccordionContent>
-                                  <p>{item.description}</p>
-                                  {item.environment && (
-                                    <p className="mt-2"><strong>Environment:</strong> {item.environment}</p>
-                                  )}
-                                  {item.link && (
-                                    <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline mt-2 block">
-                                      View Project
-                                    </a>
-                                  )}
-                                  {item.tags && item.tags.length > 0 && (
-                                    <div className="mt-2">
-                                      <strong>Tags:</strong>
-                                      <div className="flex flex-wrap gap-2 mt-1">
-                                        {item.tags.map((tag, index) => (
-                                          <Badge key={index} variant="secondary">{tag}</Badge>
-                                        ))}
-                                      </div>
+                                  <div className="space-y-2">
+                                    <p><strong>Description:</strong> {item.description}</p>
+                                    <p><strong>Environment:</strong> {item.environment}</p>
+                                    <p><strong>Technologies:</strong> {item.technologies.join(", ")}</p>
+                                    <p><strong>Challenges:</strong> {item.challenges}</p>
+                                    <p><strong>Outcomes:</strong> {item.outcomes}</p>
+                                    <p><strong>Date:</strong> {item.startDate} - {item.endDate}</p>
+                                    {item.link && (
+                                      <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline block">
+                                        View Project
+                                      </a>
+                                    )}
+                                    <div className="flex flex-wrap gap-2 mt-2">
+                                      {item.tags.map((tag, index) => (
+                                        <Badge key={index} variant="secondary">{tag}</Badge>
+                                      ))}
                                     </div>
-                                  )}
+                                  </div>
                                 </AccordionContent>
                               </AccordionItem>
                             </Accordion>
@@ -234,67 +318,171 @@ const Index = () => {
                   <DialogTitle>Add Portfolio Item</DialogTitle>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="title" className="text-right">
-                      Title
-                    </Label>
-                    <Input
-                      id="title"
-                      value={newItem.title}
-                      onChange={(e) => setNewItem({ ...newItem, title: e.target.value })}
-                      className="col-span-3"
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="description" className="text-right">
-                      Description
-                    </Label>
-                    <Textarea
-                      id="description"
-                      value={newItem.description}
-                      onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
-                      className="col-span-3"
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="environment" className="text-right">
-                      Environment
-                    </Label>
-                    <Textarea
-                      id="environment"
-                      value={newItem.environment}
-                      onChange={(e) => setNewItem({ ...newItem, environment: e.target.value })}
-                      className="col-span-3"
-                      placeholder="Describe the environment (e.g., technologies, frameworks used)"
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="link" className="text-right">
-                      Link
-                    </Label>
-                    <Input
-                      id="link"
-                      value={newItem.link}
-                      onChange={(e) => setNewItem({ ...newItem, link: e.target.value })}
-                      className="col-span-3"
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="tags" className="text-right">
-                      Tags
-                    </Label>
-                    <Input
-                      id="tags"
-                      value={newItem.tags.join(", ")}
-                      onChange={(e) => setNewItem({ ...newItem, tags: e.target.value.split(",").map(tag => tag.trim()) })}
-                      className="col-span-3"
-                      placeholder="Enter tags separated by commas"
-                    />
-                  </div>
+                  {currentStep === 0 && (
+                    <>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="title" className="text-right">
+                          Title
+                        </Label>
+                        <Input
+                          id="title"
+                          value={newItem.title}
+                          onChange={(e) => setNewItem({ ...newItem, title: e.target.value })}
+                          className="col-span-3"
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="description" className="text-right">
+                          Description
+                        </Label>
+                        <Textarea
+                          id="description"
+                          value={newItem.description}
+                          onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+                          className="col-span-3"
+                        />
+                      </div>
+                    </>
+                  )}
+                  {currentStep === 1 && (
+                    <>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="environment" className="text-right">
+                          Environment
+                        </Label>
+                        <Textarea
+                          id="environment"
+                          value={newItem.environment}
+                          onChange={(e) => setNewItem({ ...newItem, environment: e.target.value })}
+                          className="col-span-3"
+                          placeholder="Describe the environment (e.g., technologies, frameworks used)"
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="technologies" className="text-right">
+                          Technologies
+                        </Label>
+                        <Input
+                          id="technologies"
+                          value={newItem.technologies.join(", ")}
+                          onChange={(e) => setNewItem({ ...newItem, technologies: e.target.value.split(",").map(tech => tech.trim()) })}
+                          className="col-span-3"
+                          placeholder="Enter technologies separated by commas"
+                        />
+                      </div>
+                    </>
+                  )}
+                  {currentStep === 2 && (
+                    <>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="challenges" className="text-right">
+                          Challenges
+                        </Label>
+                        <Textarea
+                          id="challenges"
+                          value={newItem.challenges}
+                          onChange={(e) => setNewItem({ ...newItem, challenges: e.target.value })}
+                          className="col-span-3"
+                          placeholder="Describe the challenges faced"
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="outcomes" className="text-right">
+                          Outcomes
+                        </Label>
+                        <Textarea
+                          id="outcomes"
+                          value={newItem.outcomes}
+                          onChange={(e) => setNewItem({ ...newItem, outcomes: e.target.value })}
+                          className="col-span-3"
+                          placeholder="Describe the project outcomes"
+                        />
+                      </div>
+                    </>
+                  )}
+                  {currentStep === 3 && (
+                    <>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="startDate" className="text-right">
+                          Start Date
+                        </Label>
+                        <Input
+                          id="startDate"
+                          type="date"
+                          value={newItem.startDate}
+                          onChange={(e) => setNewItem({ ...newItem, startDate: e.target.value })}
+                          className="col-span-3"
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="endDate" className="text-right">
+                          End Date
+                        </Label>
+                        <Input
+                          id="endDate"
+                          type="date"
+                          value={newItem.endDate}
+                          onChange={(e) => setNewItem({ ...newItem, endDate: e.target.value })}
+                          className="col-span-3"
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="link" className="text-right">
+                          Link
+                        </Label>
+                        <Input
+                          id="link"
+                          value={newItem.link}
+                          onChange={(e) => setNewItem({ ...newItem, link: e.target.value })}
+                          className="col-span-3"
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="tags" className="text-right">
+                          Tags
+                        </Label>
+                        <Input
+                          id="tags"
+                          value={newItem.tags.join(", ")}
+                          onChange={(e) => setNewItem({ ...newItem, tags: e.target.value.split(",").map(tag => tag.trim()) })}
+                          className="col-span-3"
+                          placeholder="Enter tags separated by commas"
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
-                <Button onClick={handleAddPortfolioItem}>Add to Portfolio</Button>
+                <div className="flex justify-between">
+                  {currentStep > 0 && (
+                    <Button onClick={() => setCurrentStep(currentStep - 1)}>Previous</Button>
+                  )}
+                  {currentStep < 3 ? (
+                    <Button onClick={() => setCurrentStep(currentStep + 1)}>Next</Button>
+                  ) : (
+                    <Button onClick={handleAddPortfolioItem}>Add to Portfolio</Button>
+                  )}
+                </div>
               </DialogContent>
             </Dialog>
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>Suggested Future Project</CardTitle>
+                <CardDescription>Based on your current portfolio</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {portfolioItems.length > 0 ? (
+                  <div>
+                    <p><strong>Title:</strong> {extrapolateProject().title}</p>
+                    <p><strong>Description:</strong> {extrapolateProject().description}</p>
+                    <p><strong>Suggested Technologies:</strong> {extrapolateProject().technologies.join(", ")}</p>
+                    <p><strong>Potential Challenges:</strong> {extrapolateProject().challenges}</p>
+                    <p><strong>Expected Outcomes:</strong> {extrapolateProject().outcomes}</p>
+                  </div>
+                ) : (
+                  <p>Add some portfolio items to get project suggestions!</p>
+                )}
+              </CardContent>
+            </Card>
             <Button onClick={() => {
               setActiveSection("activity");
               setProfileSteps(steps => steps.map(step => step.id === "portfolio" ? { ...step, completed: true } : step));
