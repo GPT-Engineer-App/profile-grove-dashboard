@@ -19,7 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 const Index = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [portfolioItems, setPortfolioItems] = useState([]);
-  const [newItem, setNewItem] = useState({ title: "", description: "", link: "" });
+  const [newItem, setNewItem] = useState({ title: "", description: "", link: "", environment: "" });
 
   const navItems = [
     { icon: <Home className="h-5 w-5" />, label: 'Dashboard' },
@@ -31,7 +31,7 @@ const Index = () => {
   const handleAddPortfolioItem = () => {
     if (newItem.title && newItem.description) {
       setPortfolioItems([...portfolioItems, { ...newItem, id: Date.now() }]);
-      setNewItem({ title: "", description: "", link: "" });
+      setNewItem({ title: "", description: "", link: "", environment: "" });
     }
   };
 
@@ -157,6 +157,18 @@ const Index = () => {
                           />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="environment" className="text-right">
+                            Environment
+                          </Label>
+                          <Textarea
+                            id="environment"
+                            value={newItem.environment}
+                            onChange={(e) => setNewItem({ ...newItem, environment: e.target.value })}
+                            className="col-span-3"
+                            placeholder="Describe the environment (e.g., technologies, frameworks used)"
+                          />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
                           <Label htmlFor="link" className="text-right">
                             Link
                           </Label>
@@ -181,8 +193,13 @@ const Index = () => {
                         <li key={item.id} className="bg-gray-100 p-4 rounded-md">
                           <h3 className="font-semibold">{item.title}</h3>
                           <p className="text-sm text-gray-600">{item.description}</p>
+                          {item.environment && (
+                            <p className="text-sm text-gray-600 mt-2">
+                              <strong>Environment:</strong> {item.environment}
+                            </p>
+                          )}
                           {item.link && (
-                            <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline text-sm">
+                            <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline text-sm mt-2 block">
                               View Project
                             </a>
                           )}
