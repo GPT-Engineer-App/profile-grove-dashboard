@@ -10,26 +10,35 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Home, MessageSquare, Settings, HelpCircle, Menu, Plus, ChevronRight } from "lucide-react";
+import { Home, MessageSquare, Settings, HelpCircle, Menu, Plus, ChevronRight, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const Index = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [portfolioItems, setPortfolioItems] = useState([]);
-  const [newItem, setNewItem] = useState({ title: "", description: "", link: "", environment: "" });
+  const [newItem, setNewItem] = useState({ title: "", description: "", link: "", environment: "", tags: [] });
   const [skills, setSkills] = useState([
-    { name: "React", level: 80 },
-    { name: "JavaScript", level: 85 },
-    { name: "Node.js", level: 75 },
-    { name: "CSS", level: 70 },
+    { name: "React", level: 80, description: "Building modern web applications", projects: ["Portfolio Dashboard"] },
+    { name: "JavaScript", level: 85, description: "Core language for web development", projects: ["Interactive Web Apps"] },
+    { name: "Node.js", level: 75, description: "Server-side JavaScript runtime", projects: ["RESTful API"] },
+    { name: "CSS", level: 70, description: "Styling web applications", projects: ["Responsive Layouts"] },
   ]);
   const [profileCompletion, setProfileCompletion] = useState(0);
   const [activeSection, setActiveSection] = useState("basic");
+  const [activities, setActivities] = useState([
+    { type: "Portfolio Update", date: "2023-03-15", description: "Added new React project" },
+    { type: "Skill Improvement", date: "2023-03-10", description: "Completed Advanced JavaScript course" },
+    { type: "Networking", date: "2023-03-05", description: "Attended local tech meetup" },
+  ]);
+  const [activityFilter, setActivityFilter] = useState("all");
 
   const navItems = [
     { icon: <Home className="h-5 w-5" />, label: 'Dashboard' },
@@ -41,7 +50,7 @@ const Index = () => {
   const handleAddPortfolioItem = () => {
     if (newItem.title && newItem.description) {
       setPortfolioItems([...portfolioItems, { ...newItem, id: Date.now() }]);
-      setNewItem({ title: "", description: "", link: "", environment: "" });
+      setNewItem({ title: "", description: "", link: "", environment: "", tags: [] });
     }
   };
 
@@ -52,11 +61,17 @@ const Index = () => {
       true, // Basic info is always present
       skills.length > 0,
       portfolioItems.length > 0,
-      true, // Assuming activity is always present
+      activities.length > 0,
     ].filter(Boolean).length;
 
     setProfileCompletion((completedSections / totalSections) * 100);
-  }, [skills, portfolioItems]);
+  }, [skills, portfolioItems, activities]);
+
+  const skillProgressData = skills.map((skill, index) => ({
+    name: skill.name,
+    level: skill.level,
+    previousLevel: Math.max(0, skill.level - 10 + Math.floor(Math.random() * 5)), // Simulated previous level
+  }));
 
   const renderProfileSection = () => {
     switch (activeSection) {
@@ -85,13 +100,23 @@ const Index = () => {
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Skills</h3>
             {skills.map((skill, index) => (
-              <div key={index} className="space-y-2">
-                <div className="flex justify-between">
-                  <span>{skill.name}</span>
-                  <span>{skill.level}%</span>
-                </div>
-                <Progress value={skill.level} className="w-full" />
-              </div>
+              <Accordion type="single" collapsible key={index}>
+                <AccordionItem value={`skill-${index}`}>
+                  <AccordionTrigger>
+                    <div className="flex justify-between w-full pr-4">
+                      <span>{skill.name}</span>
+                      <span>{skill.level}%</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-2">
+                      <Progress value={skill.level} className="w-full" />
+                      <p><strong>Description:</strong> {skill.description}</p>
+                      <p><strong>Related Projects:</strong> {skill.projects.join(", ")}</p>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
             ))}
             <Button onClick={() => setActiveSection("portfolio")}>Next: Portfolio <ChevronRight className="ml-2 h-4 w-4" /></Button>
           </div>
@@ -113,6 +138,16 @@ const Index = () => {
                       <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline mt-2 block">
                         View Project
                       </a>
+                    )}
+                    {item.tags && item.tags.length > 0 && (
+                      <div className="mt-2">
+                        <strong>Tags:</strong>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {item.tags.map((tag, index) => (
+                            <Badge key={index} variant="secondary">{tag}</Badge>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </AccordionContent>
                 </AccordionItem>
@@ -175,6 +210,18 @@ const Index = () => {
                       className="col-span-3"
                     />
                   </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="tags" className="text-right">
+                      Tags
+                    </Label>
+                    <Input
+                      id="tags"
+                      value={newItem.tags.join(", ")}
+                      onChange={(e) => setNewItem({ ...newItem, tags: e.target.value.split(",").map(tag => tag.trim()) })}
+                      className="col-span-3"
+                      placeholder="Enter tags separated by commas"
+                    />
+                  </div>
                 </div>
                 <Button onClick={handleAddPortfolioItem}>Add to Portfolio</Button>
               </DialogContent>
@@ -186,10 +233,28 @@ const Index = () => {
         return (
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Recent Activity</h3>
+            <div className="flex justify-between items-center">
+              <Select value={activityFilter} onValueChange={setActivityFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter activities" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Activities</SelectItem>
+                  <SelectItem value="Portfolio Update">Portfolio Updates</SelectItem>
+                  <SelectItem value="Skill Improvement">Skill Improvements</SelectItem>
+                  <SelectItem value="Networking">Networking</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <ul className="space-y-2">
-              <li>Updated portfolio item: "React Dashboard"</li>
-              <li>Added new skill: "TypeScript"</li>
-              <li>Completed online course: "Advanced Node.js"</li>
+              {activities
+                .filter(activity => activityFilter === "all" || activity.type === activityFilter)
+                .map((activity, index) => (
+                  <li key={index} className="flex justify-between items-center">
+                    <span>{activity.description}</span>
+                    <Badge>{new Date(activity.date).toLocaleDateString()}</Badge>
+                  </li>
+                ))}
             </ul>
             <Button onClick={() => setActiveSection("basic")}>Back to Basic Info <ChevronRight className="ml-2 h-4 w-4" /></Button>
           </div>
@@ -270,13 +335,43 @@ const Index = () => {
             </CardContent>
           </Card>
 
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Skill Progress Over Time</CardTitle>
+              <CardDescription>Track your skill improvement</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={skillProgressData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="previousLevel" stroke="#8884d8" name="Previous Level" />
+                  <Line type="monotone" dataKey="level" stroke="#82ca9d" name="Current Level" />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Your Developer Profile</CardTitle>
               <CardDescription>Manage and showcase your professional information</CardDescription>
             </CardHeader>
             <CardContent>
-              {renderProfileSection()}
+              <Tabs defaultValue={activeSection} onValueChange={setActiveSection}>
+                <TabsList className="grid w-full grid-cols-4">
+                  <TabsTrigger value="basic">Basic</TabsTrigger>
+                  <TabsTrigger value="skills">Skills</TabsTrigger>
+                  <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
+                  <TabsTrigger value="activity">Activity</TabsTrigger>
+                </TabsList>
+                <TabsContent value={activeSection}>
+                  {renderProfileSection()}
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
         </main>
