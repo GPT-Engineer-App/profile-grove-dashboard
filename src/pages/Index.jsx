@@ -10,7 +10,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Home, MessageSquare, Settings, HelpCircle, Menu, Plus, ChevronRight, Filter } from "lucide-react";
+import { Home, MessageSquare, Settings, HelpCircle, Menu, Plus, ChevronRight, Filter, Clock, Award, Briefcase } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,16 +20,17 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 
 const Index = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [portfolioItems, setPortfolioItems] = useState([]);
   const [newItem, setNewItem] = useState({ title: "", description: "", link: "", environment: "", tags: [] });
   const [skills, setSkills] = useState([
-    { name: "React", level: 80, description: "Building modern web applications", projects: ["Portfolio Dashboard"] },
-    { name: "JavaScript", level: 85, description: "Core language for web development", projects: ["Interactive Web Apps"] },
-    { name: "Node.js", level: 75, description: "Server-side JavaScript runtime", projects: ["RESTful API"] },
-    { name: "CSS", level: 70, description: "Styling web applications", projects: ["Responsive Layouts"] },
+    { name: "React", level: 80, description: "Building modern web applications", projects: ["Portfolio Dashboard"], timeSpent: 500, certifications: ["React Developer Certificate"] },
+    { name: "JavaScript", level: 85, description: "Core language for web development", projects: ["Interactive Web Apps"], timeSpent: 1000, certifications: ["JavaScript Advanced"] },
+    { name: "Node.js", level: 75, description: "Server-side JavaScript runtime", projects: ["RESTful API"], timeSpent: 300, certifications: [] },
+    { name: "CSS", level: 70, description: "Styling web applications", projects: ["Responsive Layouts"], timeSpent: 200, certifications: ["CSS Mastery"] },
   ]);
   const [profileCompletion, setProfileCompletion] = useState(0);
   const [activeSection, setActiveSection] = useState("basic");
@@ -39,6 +40,12 @@ const Index = () => {
     { type: "Networking", date: "2023-03-05", description: "Attended local tech meetup" },
   ]);
   const [activityFilter, setActivityFilter] = useState("all");
+  const [profileSteps, setProfileSteps] = useState([
+    { id: "basic", label: "Basic Info", completed: false },
+    { id: "skills", label: "Skills", completed: false },
+    { id: "portfolio", label: "Portfolio", completed: false },
+    { id: "activity", label: "Activity", completed: false },
+  ]);
 
   const navItems = [
     { icon: <Home className="h-5 w-5" />, label: 'Dashboard' },
@@ -56,22 +63,31 @@ const Index = () => {
 
   useEffect(() => {
     // Calculate profile completion percentage
-    const totalSections = 4; // Basic, Skills, Portfolio, Activity
-    const completedSections = [
-      true, // Basic info is always present
-      skills.length > 0,
-      portfolioItems.length > 0,
-      activities.length > 0,
-    ].filter(Boolean).length;
-
+    const totalSections = profileSteps.length;
+    const completedSections = profileSteps.filter(step => step.completed).length;
     setProfileCompletion((completedSections / totalSections) * 100);
-  }, [skills, portfolioItems, activities]);
+  }, [profileSteps]);
 
   const skillProgressData = skills.map((skill, index) => ({
     name: skill.name,
     level: skill.level,
     previousLevel: Math.max(0, skill.level - 10 + Math.floor(Math.random() * 5)), // Simulated previous level
+    projectedLevel: Math.min(100, skill.level + 5 + Math.floor(Math.random() * 10)), // Projected future level
   }));
+
+  const handleSkillUpdate = (index, field, value) => {
+    const updatedSkills = [...skills];
+    updatedSkills[index][field] = value;
+    setSkills(updatedSkills);
+  };
+
+  const onDragEnd = (result) => {
+    if (!result.destination) return;
+    const items = Array.from(portfolioItems);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+    setPortfolioItems(items);
+  };
 
   const renderProfileSection = () => {
     switch (activeSection) {
@@ -92,7 +108,10 @@ const Index = () => {
               placeholder="A passionate developer with a love for creating amazing user experiences."
               className="w-full"
             />
-            <Button onClick={() => setActiveSection("skills")}>Next: Skills <ChevronRight className="ml-2 h-4 w-4" /></Button>
+            <Button onClick={() => {
+              setActiveSection("skills");
+              setProfileSteps(steps => steps.map(step => step.id === "basic" ? { ...step, completed: true } : step));
+            }}>Next: Skills <ChevronRight className="ml-2 h-4 w-4" /></Button>
           </div>
         );
       case "skills":
@@ -111,48 +130,98 @@ const Index = () => {
                   <AccordionContent>
                     <div className="space-y-2">
                       <Progress value={skill.level} className="w-full" />
-                      <p><strong>Description:</strong> {skill.description}</p>
-                      <p><strong>Related Projects:</strong> {skill.projects.join(", ")}</p>
+                      <Input
+                        value={skill.description}
+                        onChange={(e) => handleSkillUpdate(index, "description", e.target.value)}
+                        placeholder="Skill description"
+                      />
+                      <div className="flex items-center space-x-2">
+                        <Clock className="h-4 w-4" />
+                        <Input
+                          type="number"
+                          value={skill.timeSpent}
+                          onChange={(e) => handleSkillUpdate(index, "timeSpent", parseInt(e.target.value))}
+                          placeholder="Time spent (hours)"
+                        />
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Award className="h-4 w-4" />
+                        <Input
+                          value={skill.certifications.join(", ")}
+                          onChange={(e) => handleSkillUpdate(index, "certifications", e.target.value.split(", "))}
+                          placeholder="Certifications (comma-separated)"
+                        />
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Briefcase className="h-4 w-4" />
+                        <Input
+                          value={skill.projects.join(", ")}
+                          onChange={(e) => handleSkillUpdate(index, "projects", e.target.value.split(", "))}
+                          placeholder="Related projects (comma-separated)"
+                        />
+                      </div>
                     </div>
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
             ))}
-            <Button onClick={() => setActiveSection("portfolio")}>Next: Portfolio <ChevronRight className="ml-2 h-4 w-4" /></Button>
+            <Button onClick={() => {
+              setActiveSection("portfolio");
+              setProfileSteps(steps => steps.map(step => step.id === "skills" ? { ...step, completed: true } : step));
+            }}>Next: Portfolio <ChevronRight className="ml-2 h-4 w-4" /></Button>
           </div>
         );
       case "portfolio":
         return (
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Portfolio</h3>
-            {portfolioItems.map((item) => (
-              <Accordion type="single" collapsible key={item.id}>
-                <AccordionItem value={`item-${item.id}`}>
-                  <AccordionTrigger>{item.title}</AccordionTrigger>
-                  <AccordionContent>
-                    <p>{item.description}</p>
-                    {item.environment && (
-                      <p className="mt-2"><strong>Environment:</strong> {item.environment}</p>
-                    )}
-                    {item.link && (
-                      <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline mt-2 block">
-                        View Project
-                      </a>
-                    )}
-                    {item.tags && item.tags.length > 0 && (
-                      <div className="mt-2">
-                        <strong>Tags:</strong>
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          {item.tags.map((tag, index) => (
-                            <Badge key={index} variant="secondary">{tag}</Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-            ))}
+            <DragDropContext onDragEnd={onDragEnd}>
+              <Droppable droppableId="portfolio">
+                {(provided) => (
+                  <div {...provided.droppableProps} ref={provided.innerRef}>
+                    {portfolioItems.map((item, index) => (
+                      <Draggable key={item.id} draggableId={item.id.toString()} index={index}>
+                        {(provided) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                          >
+                            <Accordion type="single" collapsible>
+                              <AccordionItem value={`item-${item.id}`}>
+                                <AccordionTrigger>{item.title}</AccordionTrigger>
+                                <AccordionContent>
+                                  <p>{item.description}</p>
+                                  {item.environment && (
+                                    <p className="mt-2"><strong>Environment:</strong> {item.environment}</p>
+                                  )}
+                                  {item.link && (
+                                    <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline mt-2 block">
+                                      View Project
+                                    </a>
+                                  )}
+                                  {item.tags && item.tags.length > 0 && (
+                                    <div className="mt-2">
+                                      <strong>Tags:</strong>
+                                      <div className="flex flex-wrap gap-2 mt-1">
+                                        {item.tags.map((tag, index) => (
+                                          <Badge key={index} variant="secondary">{tag}</Badge>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </AccordionContent>
+                              </AccordionItem>
+                            </Accordion>
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </DragDropContext>
             <Dialog>
               <DialogTrigger asChild>
                 <Button>
@@ -226,7 +295,10 @@ const Index = () => {
                 <Button onClick={handleAddPortfolioItem}>Add to Portfolio</Button>
               </DialogContent>
             </Dialog>
-            <Button onClick={() => setActiveSection("activity")}>Next: Activity <ChevronRight className="ml-2 h-4 w-4" /></Button>
+            <Button onClick={() => {
+              setActiveSection("activity");
+              setProfileSteps(steps => steps.map(step => step.id === "portfolio" ? { ...step, completed: true } : step));
+            }}>Next: Activity <ChevronRight className="ml-2 h-4 w-4" /></Button>
           </div>
         );
       case "activity":
@@ -256,7 +328,10 @@ const Index = () => {
                   </li>
                 ))}
             </ul>
-            <Button onClick={() => setActiveSection("basic")}>Back to Basic Info <ChevronRight className="ml-2 h-4 w-4" /></Button>
+            <Button onClick={() => {
+              setActiveSection("basic");
+              setProfileSteps(steps => steps.map(step => step.id === "activity" ? { ...step, completed: true } : step));
+            }}>Back to Basic Info <ChevronRight className="ml-2 h-4 w-4" /></Button>
           </div>
         );
       default:
@@ -332,13 +407,20 @@ const Index = () => {
             <CardContent>
               <Progress value={profileCompletion} className="w-full" />
               <p className="mt-2 text-sm text-gray-500">{Math.round(profileCompletion)}% complete</p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {profileSteps.map((step) => (
+                  <Badge key={step.id} variant={step.completed ? "default" : "outline"}>
+                    {step.label}
+                  </Badge>
+                ))}
+              </div>
             </CardContent>
           </Card>
 
           <Card className="mb-6">
             <CardHeader>
               <CardTitle>Skill Progress Over Time</CardTitle>
-              <CardDescription>Track your skill improvement</CardDescription>
+              <CardDescription>Track your skill improvement and projected growth</CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -350,6 +432,7 @@ const Index = () => {
                   <Legend />
                   <Line type="monotone" dataKey="previousLevel" stroke="#8884d8" name="Previous Level" />
                   <Line type="monotone" dataKey="level" stroke="#82ca9d" name="Current Level" />
+                  <Line type="monotone" dataKey="projectedLevel" stroke="#ffc658" name="Projected Level" strokeDasharray="5 5" />
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>
